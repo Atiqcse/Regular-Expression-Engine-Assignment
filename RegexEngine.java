@@ -6,17 +6,24 @@ public class RegexEngine {
         // Test basic functionality
         System.out.println("=== Testing Regular Expression Engine ===");
         testPattern(engine, "abc", "abc");
-        testPattern(engine, "abc", "ab");
-        testPattern(engine, "hello", "hello");
+        testPattern(engine, "a|b", "a");
+        testPattern(engine, "a|b", "b");
+        testPattern(engine, "a|b", "c");
+        testPattern(engine, "hello|world", "hello");
+        testPattern(engine, "hello|world", "world");
     }
     
     private static void testPattern(RegexEngine engine, String pattern, String input) {
-        FSA fsa = engine.parseRegex(pattern);
-        boolean result = fsa.evaluate(input);
-        System.out.printf("Pattern '%s' with input '%s': %s%n", pattern, input, result);
+        try {
+            FSA fsa = engine.parseRegex(pattern);
+            boolean result = fsa.evaluate(input);
+            System.out.printf("Pattern '%s' with input '%s': %s%n", pattern, input, result);
+        } catch (Exception e) {
+            System.out.printf("Error with pattern '%s': %s%n", pattern, e.getMessage());
+        }
     }
     
-   
+  
     public FSA parseRegex(String regex) {
         if (regex == null || regex.isEmpty()) {
             return createEmptyFSA();
@@ -36,8 +43,24 @@ public class RegexEngine {
         }
     }
     
-   
+    
     private ParseResult parseExpression(String regex, int pos) {
+        ParseResult left = parseConcatenation(regex, pos);
+        pos = left.nextPos;
+        
+        // Check for union operator |
+        while (pos < regex.length() && regex.charAt(pos) == '|') {
+            pos++; // skip |
+            ParseResult right = parseConcatenation(regex, pos);
+            left.fsa = union(left.fsa, right.fsa);
+            pos = right.nextPos;
+        }
+        
+        return new ParseResult(left.fsa, pos);
+    }
+    
+  
+    private ParseResult parseConcatenation(String regex, int pos) {
         if (pos >= regex.length()) {
             return new ParseResult(createEmptyFSA(), pos);
         }
@@ -48,7 +71,7 @@ public class RegexEngine {
         pos = first.nextPos;
         
         // Handle concatenation (implicit)
-        while (pos < regex.length()) {
+        while (pos < regex.length() && regex.charAt(pos) != '|') {
             ParseResult next = parseBasicElement(regex, pos);
             result = concatenate(result, next.fsa);
             pos = next.nextPos;
@@ -57,19 +80,23 @@ public class RegexEngine {
         return new ParseResult(result, pos);
     }
     
-   
+  
     private ParseResult parseBasicElement(String regex, int pos) {
         if (pos >= regex.length()) {
             return new ParseResult(createEmptyFSA(), pos);
         }
         
         char c = regex.charAt(pos);
-        FSA fsa = createCharacterFSA(c);
         
+        // Skip union operator in basic element parsing
+        if (c == '|') {
+            return new ParseResult(createEmptyFSA(), pos);
+        }
+        
+        FSA fsa = createCharacterFSA(c);
         return new ParseResult(fsa, pos + 1);
     }
     
-   
     private FSA createCharacterFSA(char c) {
         FSA fsa = new FSA();
         State start = new State();
@@ -85,7 +112,44 @@ public class RegexEngine {
         return fsa;
     }
     
-  
+
+    private FSA union(FSA first, FSA second) {
+        FSA result = new FSA();
+        State newStart = new State();
+        State newAccept = new State();
+        
+        // Add new start state
+        result.setStartState(newStart);
+        result.addState(newStart);
+        
+        // Copy all states from both FSAs
+        for (State state : first.getAllStates()) {
+            result.addState(state);
+        }
+        for (State state : second.getAllStates()) {
+            result.addState(state);
+        }
+        
+        // Add new accept state
+        result.addState(newAccept);
+        result.addAcceptState(newAccept);
+        
+        // Connect new start to both FSA start states
+        newStart.addTransition(new Transition(first.getStartState()));
+        newStart.addTransition(new Transition(second.getStartState()));
+        
+        // Connect both FSA accept states to new accept state
+        for (State acceptState : first.getAcceptStates()) {
+            acceptState.addTransition(new Transition(newAccept));
+        }
+        for (State acceptState : second.getAcceptStates()) {
+            acceptState.addTransition(new Transition(newAccept));
+        }
+        
+        return result;
+    }
+    
+   
     private FSA concatenate(FSA first, FSA second) {
         FSA result = new FSA();
         
@@ -113,7 +177,7 @@ public class RegexEngine {
         return result;
     }
     
- 
+   
     private FSA createEmptyFSA() {
         FSA fsa = new FSA();
         State state = new State();
