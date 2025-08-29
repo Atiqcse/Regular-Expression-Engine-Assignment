@@ -46,6 +46,16 @@ public class RegexEngineTest {
     }
     
     @Test
+    public void testConcatenation() {
+        FSA fsa = engine.parseRegex("hello");
+        
+        assertTrue(fsa.evaluate("hello"));
+        assertFalse(fsa.evaluate("hell"));
+        assertFalse(fsa.evaluate("hellow"));
+        assertFalse(fsa.evaluate("world"));
+    }
+    
+    @Test
     public void testEmptyRegex() {
         FSA fsa = engine.parseRegex("");
         assertTrue(fsa.evaluate(""));
