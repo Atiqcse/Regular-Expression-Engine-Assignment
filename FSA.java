@@ -10,11 +10,6 @@ public class FSA {
         this.acceptStates = new HashSet<>();
     }
     
-    /**
-     * Evaluate if an input string is accepted by this FSA
-     * @param input The input string to evaluate
-     * @return true if accepted, false otherwise
-     */
     public boolean evaluate(String input) {
         if (startState == null) {
             return false;
@@ -44,11 +39,7 @@ public class FSA {
         return false;
     }
     
-    /**
-     * Get epsilon closure of a set of states
-     * @param states The initial set of states
-     * @return Set of states reachable via epsilon transitions
-     */
+   
     private Set<State> getEpsilonClosure(Set<State> states) {
         Set<State> closure = new HashSet<>(states);
         Stack<State> stack = new Stack<>();
@@ -70,12 +61,7 @@ public class FSA {
         return closure;
     }
     
-    /**
-     * Process a character and return the set of reachable states
-     * @param currentStates Current set of states
-     * @param c Character to process
-     * @return New set of reachable states
-     */
+    
     private Set<State> processCharacter(Set<State> currentStates, char c) {
         Set<State> nextStates = new HashSet<>();
         
